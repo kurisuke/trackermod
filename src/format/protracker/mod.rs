@@ -4,6 +4,8 @@ use std::convert::{From, TryFrom};
 use std::io::{Read, Seek, SeekFrom};
 use std::str::from_utf8;
 
+mod note;
+
 pub struct ProtrackerMod {
     pub title: String,
     pub samples: Vec<Sample>,
