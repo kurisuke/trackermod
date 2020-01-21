@@ -4,7 +4,7 @@ use std::convert::{From, TryFrom};
 use std::io::{Read, Seek, SeekFrom};
 use std::str::from_utf8;
 
-pub struct ModFile {
+pub struct ProtrackerMod {
     pub title: String,
     pub samples: Vec<Sample>,
     pub pattern_table: Vec<u8>,
@@ -89,7 +89,7 @@ pub enum EffectTypeExtended {
     InvertLoop = 0xf,
 }
 
-pub fn deserialize<R>(mut r: &mut R) -> std::io::Result<ModFile>
+pub fn deserialize<R>(mut r: &mut R) -> std::io::Result<ProtrackerMod>
 where
     R: Read + Seek,
 {
@@ -144,7 +144,7 @@ where
     // read samples
     parse_sample_data(&mut r, &mut samples)?;
 
-    Ok(ModFile {
+    Ok(ProtrackerMod {
         title,
         samples,
         pattern_table,

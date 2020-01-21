@@ -7,7 +7,7 @@ fn main() {
     let filename = x.next().unwrap();
 
     let mut f = File::open(filename).unwrap();
-    match trackermod::modfile::deserialize(&mut f) {
+    match trackermod::format::protracker::deserialize(&mut f) {
         Ok(_mod_data) => {
             println!("Parsed successfully!");
         }
