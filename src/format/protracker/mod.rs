@@ -4,6 +4,7 @@ use std::convert::{From, TryFrom};
 use std::io::{Read, Seek, SeekFrom};
 use std::str::from_utf8;
 
+mod info;
 mod note;
 
 pub struct ProtrackerMod {
@@ -91,67 +92,73 @@ pub enum EffectTypeExtended {
     InvertLoop = 0xf,
 }
 
-pub fn deserialize<R>(mut r: &mut R) -> std::io::Result<ProtrackerMod>
-where
-    R: Read + Seek,
-{
-    // check format
-    // seek to 1080 = 20 + 31 * (22 + 2 + 1 + 1 + 2 + 2) + 1 + 1 + 128
-    r.seek(SeekFrom::Start(1080))?;
+impl ProtrackerMod {
+    pub fn deserialize<R>(mut r: &mut R) -> std::io::Result<ProtrackerMod>
+    where
+        R: Read + Seek,
+    {
+        // check format
+        // seek to 1080 = 20 + 31 * (22 + 2 + 1 + 1 + 2 + 2) + 1 + 1 + 128
+        r.seek(SeekFrom::Start(1080))?;
 
-    // check for file type (num samples / channels)
-    let tag = parse_str(&mut r, 4)?;
-    let (num_samples, num_channels, max_pattern) = match tag.as_ref() {
-        "M.K." | "FLT4" | "4CHN" => (31u8, 4u8, 63u8),
-        "M!K!" => (31u8, 4u8, 255u8),
-        "6CHN" => (31u8, 4u8, 63u8),
-        "FLT8" | "8CHN" => (31u8, 4u8, 63u8),
-        _ => (15u8, 4u8, 63u8),
-    };
+        // check for file type (num samples / channels)
+        let tag = parse_str(&mut r, 4)?;
+        let (num_samples, num_channels, max_pattern) = match tag.as_ref() {
+            "M.K." | "FLT4" | "4CHN" => (31u8, 4u8, 63u8),
+            "M!K!" => (31u8, 4u8, 255u8),
+            "6CHN" => (31u8, 4u8, 63u8),
+            "FLT8" | "8CHN" => (31u8, 4u8, 63u8),
+            _ => (15u8, 4u8, 63u8),
+        };
 
-    // go back to start of file
-    r.seek(SeekFrom::Start(0))?;
+        // go back to start of file
+        r.seek(SeekFrom::Start(0))?;
 
-    // module title
-    let title = parse_str(&mut r, 20)?;
+        // module title
+        let title = parse_str(&mut r, 20)?;
 
-    // samples
-    let mut samples = vec![];
-    for _i in 0..num_samples {
-        samples.push(parse_sample_param(&mut r)?);
+        // samples
+        let mut samples = vec![];
+        for _i in 0..num_samples {
+            samples.push(parse_sample_param(&mut r)?);
+        }
+
+        // parse pattern table
+        let song_length = r.read_u8()?;
+        r.read_u8()?; // ignore, legacy restart
+        let mut pattern_table = vec![];
+        for _i in 0..song_length {
+            pattern_table.push(r.read_u8()?);
+        }
+
+        let padding = 128 - song_length as usize + 4;
+        for _i in 0..padding {
+            r.read_u8()?;
+        }
+
+        // determine number of patterns to read: max index from pattern table
+        let num_patterns = (*pattern_table.iter().max().unwrap() + 1).min(max_pattern);
+
+        // read patterns
+        let mut patterns = vec![];
+        for _i in 0..num_patterns {
+            patterns.push(parse_pattern(&mut r, num_channels)?);
+        }
+
+        // read samples
+        parse_sample_data(&mut r, &mut samples)?;
+
+        Ok(ProtrackerMod {
+            title,
+            samples,
+            pattern_table,
+            patterns,
+        })
     }
 
-    // parse pattern table
-    let song_length = r.read_u8()?;
-    r.read_u8()?; // ignore, legacy restart
-    let mut pattern_table = vec![];
-    for _i in 0..song_length {
-        pattern_table.push(r.read_u8()?);
+    pub fn info_str(self) -> String {
+        info::info_mod(&self)
     }
-
-    let padding = 128 - song_length as usize + 4;
-    for _i in 0..padding {
-        r.read_u8()?;
-    }
-
-    // determine number of patterns to read: max index from pattern table
-    let num_patterns = (*pattern_table.iter().max().unwrap() + 1).min(max_pattern);
-
-    // read patterns
-    let mut patterns = vec![];
-    for _i in 0..num_patterns {
-        patterns.push(parse_pattern(&mut r, num_channels)?);
-    }
-
-    // read samples
-    parse_sample_data(&mut r, &mut samples)?;
-
-    Ok(ProtrackerMod {
-        title,
-        samples,
-        pattern_table,
-        patterns,
-    })
 }
 
 fn parse_str(r: &mut dyn Read, length: usize) -> std::io::Result<String> {
