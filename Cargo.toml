@@ -10,5 +10,11 @@ edition = "2018"
 byteorder = "1.3"
 num_enum = "0.4"
 
+[dev-dependencies]
+hound = "3.4"
+
 [[example]]
 name = "moddump"
+
+[[example]]
+name = "mod2wav"
