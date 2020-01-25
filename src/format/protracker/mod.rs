@@ -1,5 +1,5 @@
 use byteorder::{BigEndian, ReadBytesExt};
-use num_enum::TryFromPrimitive;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::convert::{From, TryFrom};
 use std::io::{Read, Seek, SeekFrom};
 use std::str::from_utf8;
@@ -10,7 +10,7 @@ mod note;
 pub struct ProtrackerMod {
     pub title: String,
     pub samples: Vec<Sample>,
-    pub pattern_table: Vec<u8>,
+    pub sequence: Vec<u8>,
     pub patterns: Vec<Pattern>,
 }
 
@@ -50,7 +50,7 @@ pub enum Effect {
     },
 }
 
-#[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum EffectType {
     Arpeggio = 0x0,
@@ -71,7 +71,7 @@ pub enum EffectType {
     SetSpeed = 0xf,
 }
 
-#[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum EffectTypeExtended {
     SetFilterOnOff = 0x0,
@@ -126,9 +126,9 @@ impl ProtrackerMod {
         // parse pattern table
         let song_length = r.read_u8()?;
         r.read_u8()?; // ignore, legacy restart
-        let mut pattern_table = vec![];
+        let mut sequence = vec![];
         for _i in 0..song_length {
-            pattern_table.push(r.read_u8()?);
+            sequence.push(r.read_u8()?);
         }
 
         let padding = 128 - song_length as usize + 4;
@@ -137,7 +137,7 @@ impl ProtrackerMod {
         }
 
         // determine number of patterns to read: max index from pattern table
-        let num_patterns = (*pattern_table.iter().max().unwrap() + 1).min(max_pattern);
+        let num_patterns = (*sequence.iter().max().unwrap() + 1).min(max_pattern);
 
         // read patterns
         let mut patterns = vec![];
@@ -151,7 +151,7 @@ impl ProtrackerMod {
         Ok(ProtrackerMod {
             title,
             samples,
-            pattern_table,
+            sequence,
             patterns,
         })
     }

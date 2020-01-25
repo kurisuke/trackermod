@@ -10,10 +10,10 @@ fn main() {
     let mut f = File::open(filename).unwrap();
     match ProtrackerMod::deserialize(&mut f) {
         Ok(mod_data) => {
-            println!("{}", mod_data.info_str());
+            print!("{}", mod_data.info_str());
         }
         Err(e) => {
-            println!("Error: {}", e);
+            print!("Error: {}\n", e);
         }
     }
 }
