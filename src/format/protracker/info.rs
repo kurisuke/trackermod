@@ -86,13 +86,13 @@ fn info_pattern(pattern: &Pattern, samples: &[Sample]) -> String {
 
 fn info_channel(channel: &ChannelData, samples: &[Sample]) -> String {
     if channel.sample > 0 {
-        let note_str = match note::get_note(
-            samples[channel.sample as usize - 1].finetune,
-            channel.period,
-        ) {
-            Some(note) => format!("{}", note),
-            None => String::from("???"),
-        };
+        let note_str = format!(
+            "{}",
+            note::get_note(
+                samples[channel.sample as usize - 1].finetune,
+                channel.period,
+            )
+        );
         format!(
             "{:>02x}|{}|{}",
             channel.sample,

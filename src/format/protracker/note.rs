@@ -3,6 +3,7 @@ use std::fmt;
 pub struct Note {
     octave: u8, // 0..2
     tone: u8,   // 0..11
+    exact: bool,
 }
 
 impl fmt::Display for Note {
@@ -11,15 +12,28 @@ impl fmt::Display for Note {
     }
 }
 
-pub fn get_note(finetune: i8, period: u16) -> Option<Note> {
+pub fn get_note(finetune: i8, period: u16) -> Note {
     let ft_idx = (8 + finetune) as usize;
     match NOTES[ft_idx].binary_search_by(|probe| probe.cmp(&period).reverse()) {
         Ok(idx) => {
             let octave = idx as u8 / 12;
             let tone = idx as u8 % 12;
-            Some(Note { octave, tone })
+            Note {
+                octave,
+                tone,
+                exact: true,
+            }
         }
-        Err(_idx) => None,
+        Err(idx) => {
+            let idx = if idx > 0 { idx - 1 } else { 0 };
+            let octave = idx as u8 / 12;
+            let tone = idx as u8 % 12;
+            Note {
+                octave,
+                tone,
+                exact: false,
+            }
+        }
     }
 }
 

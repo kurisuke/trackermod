@@ -177,7 +177,7 @@ fn parse_str(r: &mut dyn Read, length: usize) -> std::io::Result<String> {
 fn parse_sample_param(mut r: &mut dyn Read) -> std::io::Result<Sample> {
     let name = parse_str(&mut r, 22)?;
     let length = r.read_u16::<BigEndian>()? as u32 * 2;
-    let finetune = r.read_i8()?;
+    let finetune = signed_nibble(r.read_u8()?);
     let volume = r.read_u8()?;
     let repeat_offset = r.read_u16::<BigEndian>()? as u32 * 2;
     let repeat_length = r.read_u16::<BigEndian>()? as u32 * 2;
@@ -252,6 +252,10 @@ fn parse_effect(t: u8, x: u8, y: u8) -> std::io::Result<Effect> {
 
 fn split_nibbles(v: &[u8]) -> Vec<(u8, u8)> {
     v.iter().map(|x| ((x & 0xf0) >> 4, x & 0x0f)).collect()
+}
+
+fn signed_nibble(n: u8) -> i8 {
+    (n & 0x7) as i8 - (n & 0x8) as i8
 }
 
 fn parse_sample_data(r: &mut dyn Read, samples: &mut Vec<Sample>) -> std::io::Result<()> {
